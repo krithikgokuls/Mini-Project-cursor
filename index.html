@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tip Calculator</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #34d399;
+      --accent-text: #042f1e;
+      --input: #0b1220;
+      --border: #334155;
+      --error: #fca5a5;
+    }
+
+    html[data-theme="light"] {
+      color-scheme: light;
+      --bg: #e2e8f0;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #059669;
+      --accent-text: #ffffff;
+      --input: #f1f5f9;
+      --border: #cbd5e1;
+      --error: #b91c1c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(circle at top, color-mix(in srgb, var(--accent) 22%, var(--bg)), var(--bg) 55%);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: min(440px, 100%);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.6rem;
+    }
+
+    .theme-toggle {
+      border: 1px solid var(--border);
+      background: var(--input);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .subtitle {
+      margin: 0 0 24px;
+      color: var(--muted);
+    }
+
+    label {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+      color: var(--muted);
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--input);
+      color: var(--text);
+      font-size: 1.05rem;
+      margin-bottom: 18px;
+    }
+
+    .tips {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .tips button {
+      border: 1px solid var(--border);
+      background: var(--input);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 0;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .tips button.active,
+    .tips button:hover {
+      background: var(--accent);
+      color: var(--accent-text);
+      border-color: var(--accent);
+    }
+
+    .results {
+      display: grid;
+      gap: 10px;
+      background: var(--input);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .row span:last-child {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .total {
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+      font-size: 1.15rem;
+    }
+
+    .error {
+      color: var(--error);
+      min-height: 1.2em;
+      margin: -8px 0 12px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="header">
+      <h1>Tip Calculator</h1>
+      <button type="button" class="theme-toggle" id="themeToggle" aria-pressed="true">Light mode</button>
+    </div>
+    <p class="subtitle">Split the bill and pick a tip in a few taps.</p>
+
+    <label for="bill">Bill amount</label>
+    <input id="bill" type="number" min="0" step="0.01" placeholder="0.00" value="50" />
+
+    <label>Tip percent</label>
+    <div class="tips" id="tips">
+      <button type="button" data-tip="10">10%</button>
+      <button type="button" data-tip="15" class="active">15%</button>
+      <button type="button" data-tip="18">18%</button>
+      <button type="button" data-tip="20">20%</button>
+    </div>
+
+    <label for="customTip">Custom tip %</label>
+    <input id="customTip" type="number" min="0" step="0.1" placeholder="e.g. 22" />
+
+    <label for="people">Number of people</label>
+    <input id="people" type="number" min="1" step="1" value="2" />
+    <p class="error" id="error"></p>
+
+    <div class="results">
+      <div class="row"><span>Tip (<span id="tipLabel">15%</span>)</span><span id="tipAmount">$0.00</span></div>
+      <div class="row"><span>Per person</span><span id="perPerson">$0.00</span></div>
+      <div class="row total"><span>Total</span><span id="total">$0.00</span></div>
+    </div>
+  </main>
+
+  <script>
+    const billInput = document.getElementById("bill");
+    const peopleInput = document.getElementById("people");
+    const customTipInput = document.getElementById("customTip");
+    const errorEl = document.getElementById("error");
+    const tipButtons = [...document.querySelectorAll("#tips button")];
+    const themeToggle = document.getElementById("themeToggle");
+    const THEME_KEY = "tip-calc-theme";
+
+    let selectedTip = 15;
+
+    function money(value) {
+      return "$" + value.toFixed(2);
+    }
+
+    function parseAmount(value) {
+      const trimmed = String(value).trim();
+      if (trimmed === "") return null;
+      const amount = Number(trimmed);
+      return Number.isFinite(amount) ? amount : NaN;
+    }
+
+    function currentTipPercent() {
+      const customTip = parseAmount(customTipInput.value);
+      if (customTip === null) return selectedTip;
+      return customTip;
+    }
+
+    function setActiveButton(percent) {
+      tipButtons.forEach((button) => {
+        button.classList.toggle("active", Number(button.dataset.tip) === percent);
+      });
+    }
+
+    function setTheme(theme) {
+      const next = theme === "light" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem(THEME_KEY, next);
+      const isDark = next === "dark";
+      themeToggle.setAttribute("aria-pressed", String(isDark));
+      themeToggle.textContent = isDark ? "Light mode" : "Dark mode";
+    }
+
+    function calculate() {
+      const bill = parseAmount(billInput.value);
+      const people = parseAmount(peopleInput.value);
+      const tipPercent = currentTipPercent();
+
+      if (bill === null || Number.isNaN(bill) || bill < 0) {
+        errorEl.textContent = "Enter a valid bill amount.";
+        return;
+      }
+      if (Number.isNaN(tipPercent) || tipPercent < 0) {
+        errorEl.textContent = "Enter a valid tip percent.";
+        return;
+      }
+      if (people === null || Number.isNaN(people) || people < 1 || !Number.isInteger(people)) {
+        errorEl.textContent = "Split among at least 1 person.";
+        return;
+      }
+
+      errorEl.textContent = "";
+      const tip = bill * (tipPercent / 100);
+      const total = bill + tip;
+      document.getElementById("tipLabel").textContent = tipPercent + "%";
+      document.getElementById("tipAmount").textContent = money(tip);
+      document.getElementById("total").textContent = money(total);
+      document.getElementById("perPerson").textContent = money(total / people);
+    }
+
+    document.getElementById("tips").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-tip]");
+      if (!button) return;
+      selectedTip = Number(button.dataset.tip);
+      customTipInput.value = "";
+      setActiveButton(selectedTip);
+      calculate();
+    });
+
+    [billInput, peopleInput, customTipInput].forEach((input) => {
+      input.addEventListener("input", calculate);
+      input.addEventListener("change", calculate);
+    });
+
+    customTipInput.addEventListener("input", () => {
+      if (customTipInput.value.trim() !== "") {
+        setActiveButton(null);
+      } else {
+        setActiveButton(selectedTip);
+      }
+    });
+
+    themeToggle.addEventListener("click", () => {
+      const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+      setTheme(next);
+    });
+
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setTheme(savedTheme || (prefersDark ? "dark" : "light"));
+    calculate();
+  </script>
+</body>
+</html>
